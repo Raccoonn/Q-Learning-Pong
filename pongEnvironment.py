@@ -49,8 +49,8 @@ class Paddle:
             y_ = self.y + self.action_Space[action]
             if y_ < 0:
                 y_ = 0
-            elif y_ > self.screen_Height - self.Height:
-                y_ = self.screen_Height - self.Height
+            elif y_ > self.screen_Height:
+                y_ = self.screen_Height
 
             self.vy = abs(self.y - y_)
 
@@ -100,7 +100,7 @@ class Ball:
         self.x = self.screen_Width//2
         self.y = np.random.randint(1, self.screen_Height-1)
 
-        self.vx = np.random.choice([-1, 1]) * np.random.choice([20, 25, 30])
+        self.vx = np.random.choice([-1, 1]) * np.random.choice([30])
         self.vy = np.random.choice([-1, 1]) * np.random.choice([5, 10, 20, 30])
 
 
@@ -194,8 +194,8 @@ class Ball:
         self.x = self.screen_Width//2
         self.y = np.random.randint(1, self.screen_Height-1)
 
-        self.vx = np.random.choice([-1, 1]) * np.random.choice([20, 25, 30])
-        self.vy = np.random.choice([-1, 1]) * np.random.choice([5, 10, 20, 30])
+        self.vx = np.random.choice([-1, 1]) * np.random.choice([20])
+        self.vy = np.random.choice([-1, 1]) * np.random.choice([5, 10, 15, 20])
 
 
         # Setup values to return state observation
@@ -222,14 +222,11 @@ class pongGame:
     """
     Class for running the game, modeled after Gym with step and render methods.
     """
-    def __init__(self, screen_Size, p1_Type, p2_Type, framerate, action_Space):
+    def __init__(self, screen_Size, p1_Type, p2_Type, action_Space):
         """
         Initialize objects for simulation/rendering
         """
         self.screen_Width, self.screen_Height = screen_Size
-
-        self.framerate = framerate
-        self.clock = pygame.time.Clock()
 
         # Initialize game objects
         self.paddle_1 = Paddle(screen_Size, p1_Type, 1, action_Space)
@@ -239,10 +236,13 @@ class pongGame:
 
 
 
-    def setupWindow(self, bgColor="black", fgColor="green"):
+    def setupWindow(self, framerate, bgColor="black", fgColor="green"):
         """
         Initialize pygame window, will need to be called if the scene is to be rendered.
         """
+        self.framerate = framerate
+        self.clock = pygame.time.Clock()
+        
         pygame.init()
         self.screen = pygame.display.set_mode((self.screen_Width, self.screen_Height))
 

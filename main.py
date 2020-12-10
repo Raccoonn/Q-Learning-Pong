@@ -31,7 +31,7 @@ if __name__ == '__main__':
                         fc1_dims=512, fc2_dims=512, fname='p1.h5')
 
     if p2_Type == 'Agent':
-        agent_2 = Agent(gamma=0.99, epsilon=0.10, alpha=0.005, input_dims=4,
+        agent_2 = Agent(gamma=0.99, epsilon=0.1, alpha=0.001, input_dims=4,
                         n_actions=5, mem_size=100000, batch_size=1024, epsilon_end=0.01,
                         fc1_dims=512, fc2_dims=512, fname='p2.h5')
 
@@ -43,15 +43,15 @@ if __name__ == '__main__':
 
         if p2_Type == 'Agent':
             agent_2.load_model('p2.h5')
-
+  
         print('\n... Models Loaded ...\n')
 
 
 
-    screen_Size = (1500, 800)
+    screen_Size = (1600, 800)
     framerate = 60
 
-    env = pongGame(screen_Size, p1_Type, p2_Type, framerate, action_Space)
+    env = pongGame(screen_Size, p1_Type, p2_Type, action_Space)
 
     if show_game == True:
         env.setupWindow()
@@ -60,9 +60,9 @@ if __name__ == '__main__':
 
     game_wins = [0, 0]
 
-    p_i, p_syms = 0, ('\\', '|', '-', '|', '/', '-')
+    p_i, p_syms = 0, ('\\', '|', '/', '-')
 
-    for episode in range(200):
+    for episode in range(1, 100000):
 
         p1_score = 0
         p2_score = 0
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         print('\n')
         while not done:
             print('Playing a game...  ' + p_syms[p_i], end='\r')
-            p_i = (p_i+1) % 6
+            p_i = (p_i+1) % 4
 
             # If game is being rendered update screen
             if show_game == True:
@@ -117,8 +117,10 @@ if __name__ == '__main__':
                     agent_2.remember(state, p2_action, p2_reward, state_, int(done))
                     agent_2.learn()
 
+
             # Update state for new step
             state = state_
+
 
         # Tally wins after each episode
         if p1_score > p2_score:
@@ -128,11 +130,11 @@ if __name__ == '__main__':
 
         print('\n\n\nGame: ', episode)
         print('Scores and total wins:', round(p1_score), round(p2_score), game_wins)
-        print('Time Elapsed: ', time.time()-start_time, '\n')
+        print('Time Elapsed: ', round(time.time()-start_time, 2), '\n')
 
 
         # Save networks if they are also being trained
-        if train_networks == True:
+        if episode % 10 == 0 and train_networks == True:
             if p1_Type == 'Agent':
                 agent_1.save_model()
 
@@ -148,9 +150,11 @@ if __name__ == '__main__':
             if win_diff > 25:
                 agent_2.load_model('p1.h5')
                 game_wins = [0, 0]
+                print('\n... Agent 2 Swapped ...\n')
             elif win_diff < -25:
                 agent_1.load_model('p2.h5')
                 game_wins = [0, 0]
+                print('\n... Agent 1 Swapped ...\n')
 
 
 

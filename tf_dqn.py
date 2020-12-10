@@ -1,7 +1,7 @@
 
-from keras.layers import Dense, Activation, BatchNormalization, LayerNormalization
-from keras.models import Sequential, load_model
-from keras.optimizers import Adam
+from tensorflow.keras.layers import Dense, Activation, BatchNormalization, LayerNormalization
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.optimizers import Adam
 import numpy as np
 
 
@@ -60,11 +60,13 @@ def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
         - Notice there is no activation on final output layer
     """
     model = Sequential([
-                LayerNormalization(),
+                BatchNormalization(),
                 Dense(fc1_dims, input_shape=(input_dims,)),
-                Activation('relu'),
+                Activation('tanh'),
+                LayerNormalization(),
                 Dense(fc2_dims),
                 Activation('relu'),
+                LayerNormalization(),
                 Dense(n_actions)])
 
     model.compile(optimizer=Adam(lr=lr), loss='mse')
