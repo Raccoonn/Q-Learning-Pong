@@ -7,7 +7,7 @@ from tf_dqn import Agent
 from pongEnvironment import pongGame
 
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 
@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
     show_game = False
 
-    load_networks = False
+    load_networks = True
 
     train_networks = True
 
@@ -26,23 +26,23 @@ if __name__ == '__main__':
 
     # Initialize DeepQ agents for the specified players
     if p1_Type == 'Agent':
-        agent_1 = Agent(gamma=0.99, epsilon=0.10, alpha=0.005, input_dims=4,
-                        n_actions=5, mem_size=100000, batch_size=256, epsilon_end=0.01,
-                        fname='pong_agent_1.h5')
+        agent_1 = Agent(gamma=0.99, epsilon=0.05, alpha=0.005, input_dims=4,
+                        n_actions=5, mem_size=100000, batch_size=1024, epsilon_end=0.01,
+                        fc1_dims=512, fc2_dims=512, fname='p1.h5')
 
     if p2_Type == 'Agent':
         agent_2 = Agent(gamma=0.99, epsilon=0.10, alpha=0.005, input_dims=4,
-                        n_actions=5, mem_size=100000, batch_size=256, epsilon_end=0.01,
-                        fname='pong_agent_2.h5')
+                        n_actions=5, mem_size=100000, batch_size=1024, epsilon_end=0.01,
+                        fc1_dims=512, fc2_dims=512, fname='p2.h5')
 
 
     # Load networks if specified
     if load_networks == True:
         if p1_Type == 'Agent':
-            agent_1.load_model('pong_agent_1.h5')
+            agent_1.load_model('p1.h5')
 
         if p2_Type == 'Agent':
-            agent_2.load_model('pong_agent_2.h5')
+            agent_2.load_model('p2.h5')
 
         print('\n... Models Loaded ...\n')
 
@@ -146,11 +146,11 @@ if __name__ == '__main__':
         if episode > 1 and episode % 100 == True:
             win_diff = game_wins[0] - game_wins[1]
             if win_diff > 25:
-                agent_2.load_model('pong_agent_1.h5')
-            elif win_diff < 25:
-                agent_1.load_model('pong_agent_2.h5')
-            
-            game_wins = [0, 0]
+                agent_2.load_model('p1.h5')
+                game_wins = [0, 0]
+            elif win_diff < -25:
+                agent_1.load_model('p2.h5')
+                game_wins = [0, 0]
 
 
 

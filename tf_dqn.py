@@ -60,13 +60,11 @@ def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
         - Notice there is no activation on final output layer
     """
     model = Sequential([
-                BatchNormalization(),
+                LayerNormalization(),
                 Dense(fc1_dims, input_shape=(input_dims,)),
                 Activation('relu'),
-                LayerNormalization(),
                 Dense(fc2_dims),
                 Activation('relu'),
-                LayerNormalization(),
                 Dense(n_actions)])
 
     model.compile(optimizer=Adam(lr=lr), loss='mse')
@@ -80,7 +78,8 @@ def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
 class Agent(object):
     def __init__(self, alpha, gamma, n_actions, epsilon, batch_size,
                  input_dims, epsilon_dec=0.996,  epsilon_end=0.01,
-                 mem_size=1000000, fname='dqn_model.h5'):
+                 mem_size=100000, fc1_dims=512, fc2_dims=512, 
+                 fname='dqn_model.h5'):
         self.action_space = [i for i in range(n_actions)]
         self.alpha = alpha
         self.gamma = gamma
@@ -92,7 +91,7 @@ class Agent(object):
 
         self.memory = ReplayBuffer(mem_size, input_dims, n_actions, discrete=True)
 
-        self.q_eval = build_dqn(alpha, n_actions, input_dims, 1024, 1024)
+        self.q_eval = build_dqn(alpha, n_actions, input_dims, fc1_dims, fc2_dims)
 
 
     def remember(self, state, action, reward, new_state, done):

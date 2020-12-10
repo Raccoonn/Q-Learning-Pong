@@ -111,8 +111,8 @@ class Ball:
         """
         done = False
 
-        p1_reward = 1
-        p2_reward = 1
+        p1_reward = 0
+        p2_reward = 0
 
         # Move ball and move to edges if necessary
         x_ = self.x + self.vx
@@ -144,8 +144,8 @@ class Ball:
                 p2_reward -= 0
             else:
                 done = True
-                p1_reward -= 1000
-                p2_reward += 1000
+                p1_reward -= 500
+                p2_reward += 100
 
         elif x_ == self.right_x:
             if abs(y_ - paddle_2.y) <= paddle_2.Height // 2:
@@ -157,8 +157,8 @@ class Ball:
                 p2_reward += 300
             else:
                 done = True
-                p1_reward += 1000
-                p2_reward -= 1000
+                p1_reward += 100
+                p2_reward -= 500
 
         # Update ball position and velocity if exceeded
         self.x = x_
@@ -166,8 +166,8 @@ class Ball:
 
 
         # Add reward based on closeness of paddle height to ball height
-        p1_reward += 1 - abs((paddle_1.y - self.y) / self.screen_Height)
-        p2_reward += 1 - abs((paddle_2.y - self.y) / self.screen_Height)
+        p1_reward += 10 - 20 * abs((paddle_1.y - self.y) / self.screen_Height)
+        p2_reward += 10 - 20 * abs((paddle_2.y - self.y) / self.screen_Height)
 
         if self.vx > self.V_max:
             self.vx = self.V_max   
