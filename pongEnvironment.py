@@ -41,7 +41,10 @@ class Paddle:
         Given an action move paddle position and update velocity
             - If player_Type = "Human" action is y and vy of mouse
             - If player_Type = "Network" action is index of value in action space
+
         """
+        p_reward = 0
+
         if self.player_Type == 'Human':
             y_, self.vy = action
 
@@ -49,12 +52,16 @@ class Paddle:
             y_ = self.y + self.action_Space[action]
             if y_ < 0:
                 y_ = 0
-            elif y_ > self.screen_Height:
-                y_ = self.screen_Height
+                p_reward -= 50
+            elif y_ > self.screen_Height - self.Height:
+                y_ = self.screen_Height - self.Height
+                p_reward -= 50
 
             self.vy = abs(self.y - y_)
 
         self.y = y_
+        
+        return p_reward
 
 
 
@@ -72,9 +79,9 @@ class Paddle:
         Show paddle in pygame window if the object is being drawn
         """
         if self.player_Num == 1:
-            pygame.draw.rect(screen, fgColor, pygame.Rect((0, self.y-self.Height//2, self.Width, self.Height)))
+            pygame.draw.rect(screen, fgColor, pygame.Rect((0, self.y, self.Width, self.Height)))
         elif self.player_Num == 2:
-            pygame.draw.rect(screen, fgColor, pygame.Rect((self.screen_Width-self.Width, self.y-self.Height//2, self.Width, self.Height)))
+            pygame.draw.rect(screen, fgColor, pygame.Rect((self.screen_Width-self.Width, self.y, self.Width, self.Height)))
 
 
 
@@ -98,23 +105,79 @@ class Ball:
         self.bot_y = self.screen_Height - self.Radius
 
         self.x = self.screen_Width//2
+        self.y = np.random.randint(self.Radius, self.screen_Height-self.Radius)
+
+        self.vx = np.random.choice([-1, 1]) * np.random.randint(20, 30)
+        self.vy = np.random.choice([-1, 1]) * np.random.randint(5, 30)
+
+        # Ralley counter to see game progress
+        self.rallies = 0
+
+    
+
+    def state_observation(self, paddle_1, paddle_2):
+        """
+            Change state observations to return 0, 1 vector:
+                - Ball above
+                - Ball below
+                - Moving towards
+                - Moving away
+        """
+        p1_state = np.zeros(4)
+        p2_state = np.zeros(4)
+        
+        x = self.x / self.screen_Width
+        y = self.y / self.screen_Width
+        vx = self.x / self.V_max
+        vy = self.y / self.V_max
+        
+        p1_state = np.array([x, y, vx, vy])
+        p2_state = np.array([x, y, vx, vy])
+
+
+        return p1_state, p2_state
+
+
+
+    def reset_ball(self, paddle_1, paddle_2):
+        """
+        Reset ball function, selects randomized velocity, location (near middle line)
+        """
+
+        # Reset position and select new speeds
+        self.x = 100
         self.y = np.random.randint(1, self.screen_Height-1)
 
-        self.vx = np.random.choice([-1, 1]) * np.random.choice([30])
-        self.vy = np.random.choice([-1, 1]) * np.random.choice([5, 10, 20, 30])
+        self.vx = np.random.randint(20, 25)
+        self.vy = np.random.choice([-1, 1]) * np.random.randint(5, 20)
+
+
+        p1_state, p2_state = self.state_observation(paddle_1, paddle_2)
+
+        return p1_state, p2_state
 
 
 
     def update(self, paddle_1, paddle_2):
         """
         Update position and velocity of the ball
+            - Includes rewards to be returned for each player
+                - Modify state observations to include opponent y_pos and self y_pos
+
+            - Including score, first to 5 currently
+
+            - New state return sctucture:
+                - Current player score, ball pos and velocity, position of player, position of opponent
+
+                - Total of 7 values in observation for each player (All scaled 0 to 1)
+
         """
         done = False
-
+        
         p1_reward = 0
         p2_reward = 0
 
-        # Move ball and move to edges if necessary
+        # Move ball and move to edges if past boundary
         x_ = self.x + self.vx
         y_ = self.y + self.vy
 
@@ -133,76 +196,67 @@ class Ball:
         if y_ == self.top_y or y_ == self.bot_y:
             self.vy = round(-0.9 * self.vy)
 
-        # Left or right sides, update done if paddle misses ball
+
+        # Left side
         if x_ == self.left_x:
-            if abs(y_ - paddle_1.y) <= paddle_1.Height // 2:
+            if abs(y_ - (paddle_1.y + paddle_1.Height//2)) <= paddle_1.Height//2:
                 x_ += self.Radius
                 self.vx = round(-0.9 * self.vx)
-                self.vy += paddle_1.vy//6
+                self.vy += paddle_1.vy//4
 
-                p1_reward += 300
+                self.rallies += 1
+
+                p1_reward += 100
                 p2_reward -= 0
             else:
+                p1_reward -= 100
+                p2_reward += 0
                 done = True
-                p1_reward -= 500
-                p2_reward += 100
 
+
+        # Right side
         elif x_ == self.right_x:
-            if abs(y_ - paddle_2.y) <= paddle_2.Height // 2:
+            if abs(y_ - (paddle_2.y + paddle_2.Height//2)) <= paddle_2.Height//2:
                 x_ -= self.Radius
                 self.vx = round(-0.9 * self.vx)
-                self.vy += paddle_2.vy//6
+                self.vy += paddle_2.vy//4
+
+                self.rallies += 1
 
                 p1_reward -= 0
-                p2_reward += 300
+                p2_reward += 100
             else:
+                p1_reward += 0
+                p2_reward -= 100
                 done = True
-                p1_reward += 100
-                p2_reward -= 500
 
-        # Update ball position and velocity if exceeded
-        self.x = x_
-        self.y = y_
+
 
 
         # Add reward based on closeness of paddle height to ball height
-        p1_reward += 10 - 20 * abs((paddle_1.y - self.y) / self.screen_Height)
-        p2_reward += 10 - 20 * abs((paddle_2.y - self.y) / self.screen_Height)
-
-        if self.vx > self.V_max:
-            self.vx = self.V_max   
-
-        if self.vy > self.V_max:
-            self.vy = self.V_max
+        rwd = 5
+        p1_reward += rwd - 2 * rwd * abs((paddle_1.y + (paddle_1.Height//2) - self.y) / self.screen_Height)
+        p2_reward += rwd - 2 * rwd * abs((paddle_2.y + (paddle_2.Height//2) - self.y) / self.screen_Height)
 
 
-        # Setup values to return state observation
-        state = np.array([self.x/self.screen_Width, self.y/self.screen_Height, 
-                          self.vx/self.V_max, self.vy/self.V_max])
+        # Add reward for ball speed
+        vb = np.sqrt((self.vx/self.V_max)**2 + (self.vy/self.V_max)**2)
 
-        return state, p1_reward, p2_reward, done
+        # Update ball position and velocity if exceeded
+        if not done:
+            self.x = x_
+            self.y = y_
 
-
-
-    def reset_ball(self):
-        """
-        Reset ball function, selects randomized velocity, location (near middle line)
-        """
-        done = False
-
-        # Reset position and select new speeds
-        self.x = self.screen_Width//2
-        self.y = np.random.randint(1, self.screen_Height-1)
-
-        self.vx = np.random.choice([-1, 1]) * np.random.choice([20])
-        self.vy = np.random.choice([-1, 1]) * np.random.choice([5, 10, 15, 20])
+            if self.vx > self.V_max:
+                self.vx = self.V_max
+            if self.vy > self.V_max:
+                self.vy = self.V_max
 
 
-        # Setup values to return state observation
-        state = np.array([self.x/self.screen_Width, self.y/self.screen_Height, 
-                          self.vx/self.V_max, self.vy/self.V_max])
+        p1_state, p2_state = self.state_observation(paddle_1, paddle_2)
 
-        return state
+        return p1_state, p2_state, p1_reward, p2_reward, done
+
 
 
 
@@ -221,6 +275,9 @@ class Ball:
 class pongGame:
     """
     Class for running the game, modeled after Gym with step and render methods.
+
+        - Game environment tracks score and done
+        - These values are passed to the ball update funtion
     """
     def __init__(self, screen_Size, p1_Type, p2_Type, action_Space):
         """
@@ -232,6 +289,38 @@ class pongGame:
         self.paddle_1 = Paddle(screen_Size, p1_Type, 1, action_Space)
         self.paddle_2 = Paddle(screen_Size, p2_Type, 2, action_Space)
         self.ball = Ball(screen_Size, self.paddle_1.Width)
+
+
+
+
+    def reset(self):
+        """
+        Reset game, return state and done=False
+        """
+        # Reset ball ralley counter, mostly for progress viewing
+        self.ball.rallies = 0
+        
+
+        self.paddle_1.reset_paddle()
+        self.paddle_2.reset_paddle()
+
+        p1_state, p2_state = self.ball.reset_ball(self.paddle_1, self.paddle_2)
+
+        return p1_state, p2_state
+
+
+
+    def step(self, p1_action, p2_action):
+        """
+        Take a step each frame
+            - done reflects the status of the ball, if False game is over
+        """
+        p1_r = self.paddle_1.update(p1_action)
+        p2_r = self.paddle_2.update(p2_action)
+        
+        p1_state, p2_state, p1_reward, p2_reward, done = self.ball.update(self.paddle_1, self.paddle_2)
+
+        return p1_state, p2_state, (p1_reward+p1_r), (p2_reward+p2_r), done
 
 
 
@@ -262,31 +351,3 @@ class pongGame:
         self.ball.show_ball(self.screen, self.fgColor)
 
         self.clock.tick(self.framerate)
-
-
-
-
-    def step(self, p1_action, p2_action):
-        """
-        Take a step each frame
-            - done reflects the status of the ball, if False game is over
-        """
-        self.paddle_1.update(p1_action)
-        self.paddle_2.update(p2_action)
-        
-        state, p1_reward, p2_reward, done = self.ball.update(self.paddle_1, self.paddle_2)
-
-        return state, p1_reward, p2_reward, done
-
-
-    def reset(self):
-        """
-        Reset game, return state and done=False
-        """
-
-        self.paddle_1.reset_paddle()
-        self.paddle_2.reset_paddle()
-
-        state = self.ball.reset_ball()
-
-        return state, False
