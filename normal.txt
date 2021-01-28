@@ -1,0 +1,9 @@
+No output activation, small lr, normal network, smaller sample, 
+Larger rewards, positive and negative, increased ball speed
+normal/
+Agent
+Agent
+50000
+-35,35
+512
+512
